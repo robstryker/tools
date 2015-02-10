@@ -11,6 +11,8 @@
 package org.switchyard.tools.m2e;
 
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.Set;
 
 import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.MojoExecution;
@@ -36,6 +38,7 @@ import org.eclipse.m2e.wtp.ResourceCleaner;
 import org.eclipse.m2e.wtp.WTPProjectsUtil;
 import org.eclipse.wst.common.project.facet.core.IFacetedProject;
 import org.eclipse.wst.common.project.facet.core.IFacetedProjectWorkingCopy;
+import org.eclipse.wst.common.project.facet.core.IGroup;
 import org.eclipse.wst.common.project.facet.core.IPreset;
 import org.eclipse.wst.common.project.facet.core.IProjectFacet;
 import org.eclipse.wst.common.project.facet.core.IProjectFacetVersion;
@@ -81,13 +84,17 @@ public class SwitchYardProjectConfigurator extends AbstractProjectConfigurator {
                 modified = true;
             }
         }
-        // make sure a JEE facet is installed
-        if (UTILITY_MODULE_FACET != null && "jar".equals(request.getMavenProject().getPackaging()) //$NON-NLS-1$
-                && !ifpwc.hasProjectFacet(UTILITY_MODULE_FACET)) {
+        
+        // make sure a module facet is installed
+    	Set<IProjectFacetVersion> facets = ifpwc.getProjectFacets();
+    	IGroup g = ProjectFacetsManager.getGroup("modules");
+    	Set<IProjectFacetVersion> moduleFacets = g.getMembers();
+    	if( !hasModuleFacet(facets, moduleFacets)) {
             // add utility module facet
             ifpwc.addProjectFacet(UTILITY_MODULE_FACET.getDefaultVersion());
             modified = true;
-        }
+    	}
+        
         if (modified) {
             final ResourceCleaner fileCleaner = new ResourceCleaner(request.getProject());
             try {
@@ -106,6 +113,16 @@ public class SwitchYardProjectConfigurator extends AbstractProjectConfigurator {
         }
     }
 
+    protected boolean hasModuleFacet(Set<IProjectFacetVersion> existing, Set<IProjectFacetVersion> moduleFacets) {
+    	Iterator<IProjectFacetVersion> i = existing.iterator();
+    	while(i.hasNext() ) {
+    		if( moduleFacets.contains(i.next())) {
+    			return true;
+    		}
+    	}
+    	return false;
+    }
+    
     protected void addFilesToClean(ResourceCleaner fileCleaner, IPath[] paths) {
         for (IPath resourceFolderPath : paths) {
             fileCleaner.addFiles(resourceFolderPath.append("META-INF/MANIFEST.MF")); //$NON-NLS-1$
